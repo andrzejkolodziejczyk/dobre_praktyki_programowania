@@ -2,7 +2,6 @@ import sys
 from pathlib import Path
 import csv
 
-sys.path.append("../api")
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
