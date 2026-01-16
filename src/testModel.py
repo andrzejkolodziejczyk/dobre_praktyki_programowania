@@ -96,6 +96,8 @@ def calculateAccuracy(images, groundTruthLabels):
         
         if pred_label == true_label:
             correct += 1
+        else:
+            print(f"Mismatch for {image}: predicted '{pred_label}', true '{true_label}'")
     
     accuracy = (correct / total) * 100
     return accuracy
