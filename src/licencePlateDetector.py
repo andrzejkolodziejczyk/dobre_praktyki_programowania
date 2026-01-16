@@ -84,9 +84,8 @@ def recognizePlate(imageData):
 
             custom_config_8 = r'--oem 3 --psm 8 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
             raw_text = pytesseract.image_to_string(roi, config=custom_config_8).strip()
-            print(box)
             return {
-                "box": f"xTL: {x1}, yTL: {y1}, xBR: {x2}, yBR: {y2}",
+                "box": [x1, y1, x2, y2],
                 "text": cleanPlateText(raw_text)
             }
     return None
