@@ -4,6 +4,7 @@ import json
 import redis
 import uuid
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks
+from licencePlateDetector import recognizePlate
 
 app = FastAPI(title="LPR Pipeline API")
 
@@ -20,12 +21,9 @@ async def processImage(file: UploadFile = File(...)):
 
     contents = await file.read()
     
-    mockResult = {
-        "filename": file.filename,
-        "plateNumber": "KRA12345",  
-    }
+    result = recognizePlate(contents)
     
-    return {"message": "Image processed successfully", "data": mockResult}
+    return {"message": "Image processed successfully", "data": result}
 
 
 
@@ -52,28 +50,13 @@ async def queue_image(file: UploadFile = File(...)):
 
 
 
-#consumer
-def run_consumer():
-    print(f"Consumer started. Waiting for jobs in '{QUEUE_NAME}'...")
-    
-    while True:
-        _, job = r.brpop(QUEUE_NAME)
-        jobData = json.loads(job)
-        
-        id = jobData['id']
-        print(f"Processing job {id} for file {jobData['name']}...")
-        
-        time.sleep(2)
-        result = {
-            "id": id,
-            "plate": "KR77777",
-            "processed_at": time.time()
-        }
-        
-        r.hset(RESULTS_KEY, id, json.dumps(result))
-        print(f"Job {id} finished and saved.")
+@app.get("/results")
+async def get_results():
+    allResults = r.hgetall(RESULTS_KEY)
+    parsedResults = {key: json.loads(value) for key, value in allResults.items()}
+    return parsedResults
+
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
-    run_consumer()
