@@ -1,6 +1,9 @@
 from sqlalchemy import Column, String, Float, Integer, DateTime, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
+from typing import Optional
+from datetime import datetime
+
 
 Base = declarative_base()
 
@@ -21,12 +24,12 @@ class Movie(Base):
 class Link(Base):
     __tablename__ = "links"
     
-    movieId = Column(String, ForeignKey("movies.id"), primary_key=True)
+    id = Column(String, ForeignKey("movies.id"), primary_key=True)
     imdbId = Column(String)
     tmdbId = Column(String)
     
     def __init__(self, movieId: str, imdbId: str, tmdbId: str):
-        self.movieId = movieId
+        self.id = movieId
         self.imdbId = imdbId
         self.tmdbId = tmdbId
 
@@ -61,4 +64,5 @@ class Tag(Base):
         self.movieId = movieId
         self.tag = tag
         self.timestamp = datetime.fromtimestamp(int(timestamp))
+
 

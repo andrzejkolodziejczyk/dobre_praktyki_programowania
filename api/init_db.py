@@ -9,10 +9,9 @@ from models import Base, Movie, Link, Rating, Tag
 
 
 # Database configuration
-DB_DIR = Path(__file__).parent
 DB_NAME = "movies.db"
-DB_PATH = DB_DIR / DB_NAME
-DATABASE_URL = f"sqlite:///{DB_PATH}"
+
+DATABASE_URL = f"sqlite:///{DB_NAME}"
 
 
 def init_database():
@@ -60,10 +59,10 @@ def load_csv_data_to_db(engine, session_factory):
     session = session_factory()
     
     try:
-        movies_data = read_csv_file("movies.csv")
-        links_data = read_csv_file("links.csv")
-        ratings_data = read_csv_file("ratings.csv")
-        tags_data = read_csv_file("tags.csv")
+        movies_data = read_csv_file("../db/movies.csv")
+        links_data = read_csv_file("../db/links.csv")
+        ratings_data = read_csv_file("../db/ratings.csv")
+        tags_data = read_csv_file("../db/tags.csv")
 
         movies = [
             Movie(
@@ -120,4 +119,4 @@ def load_csv_data_to_db(engine, session_factory):
 if __name__ == "__main__":
     engine, SessionLocal = init_database()
     load_csv_data_to_db(engine, SessionLocal)
-    print(f"Db initialized succesfully, file: {DB_PATH}")
+    print(f"Db initialized succesfully, file: {DB_NAME}")
