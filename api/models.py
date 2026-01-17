@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Float, Integer, DateTime, ForeignKey
+from sqlalchemy import Column, String, Float, Integer, DateTime, ForeignKey, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
 from typing import Optional
@@ -65,4 +65,9 @@ class Tag(Base):
         self.tag = tag
         self.timestamp = datetime.fromtimestamp(int(timestamp))
 
-
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String, unique=True, nullable=False)
+    password_hash = Column(String, nullable=False)
+    roles = Column(JSON, default=list)

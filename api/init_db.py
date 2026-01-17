@@ -5,7 +5,7 @@ import csv
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from models import Base, Movie, Link, Rating, Tag
+from models import Base, Movie, Link, Rating, Tag, User
 
 
 # Database configuration
@@ -106,6 +106,15 @@ def load_csv_data_to_db(engine, session_factory):
         ]
         session.add_all(tags)
 
+        users = [
+            User(
+                username="admin",
+                password_hash="$2b$12$KIXQJY5Z6Yh1Fh8H7G6kUuJ8jFh8H7G6kUuJ8jFh8H7G6kUuJ8jFh8H7G6kUu",  # bcrypt hash for "adminpass"
+                roles="ROLE_ADMIN"
+            )
+        ]
+        session.add_all(users)
+        
         session.commit()
         
     except Exception as e:

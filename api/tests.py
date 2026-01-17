@@ -420,3 +420,181 @@ def test_delete_tag_not_found(client):
     response = client.delete("/tags/99999")
     
     assert response.status_code == 404
+
+def test_login_success(client, sample_user):
+    """Test successful login with valid credentials"""
+    response = client.post("/login", json={
+        "username": "testuser",
+        "password": "testpass123"
+    })
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert "access_token" in data
+    assert data["token_type"] == "bearer"
+    assert len(data["access_token"]) > 0
+
+
+def test_login_invalid_username(client, sample_user):
+    """Test login with non-existent username"""
+    response = client.post("/login", json={
+        "username": "nonexistent",
+        "password": "testpass123"
+    })
+    
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid credentials"
+
+
+def test_login_invalid_password(client, sample_user):
+    """Test login with wrong password"""
+    response = client.post("/login", json={
+        "username": "testuser",
+        "password": "wrongpassword"
+    })
+    
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid credentials"
+
+
+def test_login_missing_fields(client):
+    """Test login with missing fields"""
+    response = client.post("/login", json={
+        "username": "testuser"
+    })
+    
+    assert response.status_code == 422  # Validation error
+
+
+# ==================== USER CREATION TESTS ====================
+
+def test_create_user_without_token(client):
+    """Test creating a regular user without authentication (should succeed)"""
+    response = client.post("/users", 
+        json={
+            "username": "newuser",
+            "password": "newpass123",
+            "roles": ["ROLE_USER"]
+        }
+    )
+    
+    assert response.status_code == 201
+    data = response.json()
+    assert data["username"] == "newuser"
+    assert data["roles"] == ["ROLE_USER"]
+    assert "password" not in data
+    assert "password_hash" not in data
+
+
+def test_create_admin_without_token(client):
+    """Test creating admin user without authentication (should fail)"""
+    response = client.post("/users",
+        json={
+            "username": "newadmin",
+            "password": "adminpass123",
+            "roles": ["ROLE_USER", "ROLE_ADMIN"]
+        }
+    )
+    
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Authorization required to create admin user"
+
+
+def test_create_admin_as_non_admin(client, auth_token):
+    """Test creating admin user as non-admin (should fail)"""
+    response = client.post("/users",
+        headers={"Authorization": f"Bearer {auth_token}"},
+        json={
+            "username": "newadmin",
+            "password": "adminpass123",
+            "roles": ["ROLE_USER", "ROLE_ADMIN"]
+        }
+    )
+    
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Admin access required to create admin user"
+
+
+def test_create_user_duplicate_username(client, sample_user):
+    """Test creating a user with existing username"""
+    response = client.post("/users",
+        json={
+            "username": "testuser",  # Already exists
+            "password": "newpass123",
+            "roles": ["ROLE_USER"]
+        }
+    )
+    
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Username already exists"
+
+
+def test_create_admin_user(client, admin_token):
+    """Test creating a new admin user"""
+    response = client.post("/users",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={
+            "username": "newadmin",
+            "password": "adminpass",
+            "roles": ["ROLE_USER", "ROLE_ADMIN"]
+        }
+    )
+    
+    assert response.status_code == 201
+    data = response.json()
+    assert data["username"] == "newadmin"
+    assert "ROLE_ADMIN" in data["roles"]
+
+def test_get_user_details_with_token(client, auth_token, sample_user):
+    """Test getting user details with valid token"""
+    response = client.get("/user_details",
+        headers={"Authorization": f"Bearer {auth_token}"}
+    )
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert data["username"] == "testuser"
+    assert data["user_id"] == sample_user.id
+    assert data["roles"] == ["ROLE_USER"]
+    assert "token_issued_at" in data
+    assert "token_expires_at" in data
+
+
+def test_get_user_details_without_token(client):
+    """Test getting user details without token"""
+    response = client.get("/user_details")
+    
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Authorization header missing"
+
+
+def test_get_user_details_invalid_token(client):
+    """Test getting user details with invalid token"""
+    response = client.get("/user_details",
+        headers={"Authorization": "Bearer invalid_token_here"}
+    )
+    
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid token"
+
+
+def test_get_user_details_malformed_header(client):
+    """Test getting user details with malformed authorization header"""
+    response = client.get("/user_details",
+        headers={"Authorization": "InvalidFormat"}
+    )
+    
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid authorization header format"
+
+
+def test_admin_user_details(client, admin_token, sample_admin):
+    """Test getting admin user details"""
+    response = client.get("/user_details",
+        headers={"Authorization": f"Bearer {admin_token}"}
+    )
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert data["username"] == "adminuser"
+    assert "ROLE_ADMIN" in data["roles"]

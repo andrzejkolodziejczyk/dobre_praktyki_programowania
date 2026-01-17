@@ -1,16 +1,18 @@
 import pytest
 import sys
+import bcrypt
 import os
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
 
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from app import app
 from init_db import get_session
-from models import Base, Movie, Link, Rating, Tag
+from models import Base, Movie, Link, Rating, Tag, User
 
 # Test database
 TEST_DATABASE_URL = "sqlite:///./test.db"
@@ -87,3 +89,52 @@ def sample_tags(db_session):
         db_session.add(tag)
     db_session.commit()
     return tags
+
+@pytest.fixture
+def sample_user(db_session):
+    """Create a sample regular user in test database"""
+    password_hash = bcrypt.hashpw(b"testpass123", bcrypt.gensalt())
+    user = User(
+        username="testuser",
+        password_hash=password_hash.decode('utf-8'),
+        roles=["ROLE_USER"]
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    return user
+
+
+@pytest.fixture
+def sample_admin(db_session):
+    """Create a sample admin user in test database"""
+    password_hash = bcrypt.hashpw(b"adminpass123", bcrypt.gensalt())
+    admin = User(
+        username="adminuser",
+        password_hash=password_hash.decode('utf-8'),
+        roles=["ROLE_USER", "ROLE_ADMIN"]
+    )
+    db_session.add(admin)
+    db_session.commit()
+    db_session.refresh(admin)
+    return admin
+
+@pytest.fixture
+def auth_token(client, sample_user):
+    """Get authentication token for regular user"""
+    response = client.post("/login", json={
+        "username": "testuser",
+        "password": "testpass123"
+    })
+    return response.json()["access_token"]
+
+
+@pytest.fixture
+def admin_token(client, sample_admin):
+    """Get authentication token for admin user"""
+    response = client.post("/login", json={
+        "username": "adminuser",
+        "password": "adminpass123"
+    })
+    return response.json()["access_token"]
+
