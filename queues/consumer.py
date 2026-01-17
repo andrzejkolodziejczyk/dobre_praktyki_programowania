@@ -1,37 +1,31 @@
+import pika
 import time
-from init_db import SessionLocal, Job
+import json
+import os
 
-def process_jobs():
-    print("Consumer uruchomiony. Oczekiwanie na pracę...")
+def callback(ch, method, properties, body):
+    data = json.loads(body)
+    print(f" [x] Rozpoczęto: {data['task_name']} (ID: {data['task_id']})")
     
-    while True:
-        session = SessionLocal()
-        try:
-            job = session.query(Job).filter(Job.status == "pending").first()
+    time.sleep(30)
+    
+    print(f" [x] Zakończono: {data['task_id']}")
+    
+    ch.basic_ack(delivery_tag=method.delivery_tag)
 
-            if job:
-                job.status = "in_progress"
-                job_id = job.id
-                task_name = job.task_name
-                session.commit()
-                
-                print(f"[{job_id}] Przetwarzanie: {task_name}...")
-                
-                time.sleep(30)
-                
+def start_consumer():
+    host = os.environ.get('RABBITMQ_HOST', 'localhost')
+    connection = pika.BlockingConnection(pika.ConnectionParameters(host=host))
+    channel = connection.channel()
 
-                job.status = "done"
-                session.commit()
-                print(f"[{job_id}] Zakończono sukcesem.")
-            else:
-                session.close()
-                time.sleep(5) # Czekaj jeśli nie ma pracy
-        except Exception as e:
-            session.rollback()
-            print(f"Wystąpił błąd: {e}")
-            time.sleep(5)
-        finally:
-            session.close()
+    channel.queue_declare(queue='task_queue', durable=True)
+    print(' [*] Oczekiwanie na zadania. Naciśnij CTRL+C aby wyjść')
+
+    channel.basic_qos(prefetch_count=1)
+    
+    channel.basic_consume(queue='task_queue', on_message_callback=callback)
+
+    channel.start_consuming()
 
 if __name__ == "__main__":
-    process_jobs()
+    start_consumer()
