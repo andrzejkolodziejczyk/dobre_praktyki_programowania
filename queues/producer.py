@@ -1,24 +1,19 @@
-import csv
-import uuid
-import portalocker
-import os
+from init_db import SessionLocal, Job, init_db
 
-DB_FILE = "jobs_queue.csv"
-
-def add_job(task_name):
-    file_exists = os.path.isfile(DB_FILE)
-    
-    with open(DB_FILE, "a", newline="", encoding="utf-8") as f:
-        portalocker.lock(f, portalocker.LockFlags.EXCLUSIVE)
-        
-        writer = csv.writer(f)
-        if not file_exists:
-            writer.writerow(["id", "task", "status"])
-        
-        job_id = str(uuid.uuid4())[:8]
-        writer.writerow([job_id, task_name, "pending"]) 
-        
-        print(f"Dodano zadanie: {task_name} (ID: {job_id})")
+def add_jobs(count=1):
+    init_db()
+    session = SessionLocal()
+    try:
+        for i in range(1, count + 1):
+            new_job = Job(task_name=f"Rozmowa telefoniczna nr {i}", status="pending")
+            session.add(new_job)
+        session.commit()
+        print(f"Pomyślnie dodano {count} zadań do bazy.")
+    except Exception as e:
+        session.rollback()
+        print(f"Błąd: {e}")
+    finally:
+        session.close()
 
 if __name__ == "__main__":
-    add_job("Rozmowa telefoniczna")
+    add_jobs(1)
